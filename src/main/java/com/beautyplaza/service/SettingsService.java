@@ -1,65 +1,47 @@
 // service/SettingsService.java (NEW - replaces AdminController logic)
 package com.beautyplaza.service;
 
+
+// Importing the SettingsDto.
 import com.beautyplaza.dto.SettingDTO;
-import com.beautyplaza.model.Setting;
-import com.beautyplaza.repository.SettingRepository;
-import com.beautyplaza.request.UpdateSettingRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service;
-
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
-@Service
-@RequiredArgsConstructor
-public class SettingsService {
+/**
+ * Interface for Settings-related business logic.
+ * Defines the contract for operations on application settings.
+ */
+public interface SettingsService {
+    /**
+     * Creates a new application setting.
+     * @param settingsDto The SettingsDto containing setting details.
+     * @return The created SettingsDto.
+     */
+    SettingDTO createSetting(SettingDTO settingsDto);
 
-    private final SettingRepository settingRepository;
+    /**
+     * Retrieves a setting by its unique key.
+     * @param settingKey The key of the setting to retrieve.
+     * @return The SettingsDto of the found setting.
+     */
+    SettingDTO getSettingByKey(String settingKey);
 
-    public Optional<SettingDTO> getSetting(String key) {
-        return settingRepository.findBySettingKey(key)
-                .map(this::toSettingDTO);
-    }
+    /**
+     * Retrieves all application settings.
+     * @return A list of all SettingsDtos.
+     */
+    List<SettingDTO> getAllSettings();
 
-    public List<SettingDTO> getAllSettings() {
-        return settingRepository.findAll().stream()
-                .map(this::toSettingDTO)
-                .collect(Collectors.toList());
-    }
+    /**
+     * Updates an existing application setting.
+     * @param settingKey The key of the setting to update.
+     * @param settingsDto The SettingsDto containing updated details.
+     * @return The updated SettingsDto.
+     */
+    SettingDTO updateSetting(String settingKey, SettingDTO settingsDto);
 
-    public List<SettingDTO> getSettingsByCategory(String category) {
-        return settingRepository.findByCategory(category).stream()
-                .map(this::toSettingDTO)
-                .collect(Collectors.toList());
-    }
-
-    public SettingDTO createOrUpdateSetting(UpdateSettingRequest request) {
-        Setting setting = settingRepository.findBySettingKey(request.getSettingKey())
-                .orElse(new Setting()); // Create new if not found
-
-        setting.setSettingKey(request.getSettingKey());
-        setting.setSettingValue(request.getSettingValue());
-        setting.setDescription(request.getDescription() != null ? request.getDescription() : setting.getDescription());
-        setting.setCategory(request.getCategory() != null ? request.getCategory() : setting.getCategory());
-
-        return toSettingDTO(settingRepository.save(setting));
-    }
-
-    public void deleteSetting(String key) {
-        Setting setting = settingRepository.findBySettingKey(key)
-                .orElseThrow(() -> new RuntimeException("Setting not found with key: " + key));
-        settingRepository.delete(setting);
-    }
-
-    private SettingDTO toSettingDTO(Setting setting) {
-        SettingDTO dto = new SettingDTO();
-        dto.setId(setting.getId());
-        dto.setKey(setting.getSettingKey());
-        dto.setValue(setting.getSettingValue());
-        dto.setDescription(setting.getDescription());
-        dto.setCategory(setting.getCategory());
-        return dto;
-    }
+    /**
+     * Deletes an application setting by its key.
+     * @param settingKey The key of the setting to delete.
+     */
+    void deleteSetting(String settingKey);
 }

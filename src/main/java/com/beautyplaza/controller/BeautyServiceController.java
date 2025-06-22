@@ -1,7 +1,7 @@
 package com.beautyplaza.controller;
 
+// Importing necessary Spring Framework, DTO classes.
 import com.beautyplaza.dto.BeautyServiceDTO;
-import com.beautyplaza.exception.ResourceNotFoundException;
 import com.beautyplaza.service.BeautyServiceService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,99 +9,76 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 
-@RestController
-@RequestMapping("/api/services")
+/**
+ * REST Controller for managing Service entities.
+ * Provides endpoints for CRUD operations on services, with role-based access control.
+ */
+@RestController // Marks this class as a REST controller.
+@RequestMapping("/api/services") // Base path for all endpoints in this controller.
 public class BeautyServiceController {
 
-    private final BeautyServiceService beautyServiceService;
+    @Autowired // Injects ServiceService for business logic operations on services.
+    private BeautyServiceService serviceService;
 
-    @Autowired
-    public BeautyServiceController(BeautyServiceService beautyServiceService) {
-        this.beautyServiceService = beautyServiceService;
+    /**
+     * Creates a new service. Accessible by ADMIN only.
+     * @param serviceDto The ServiceDto containing service details.
+     * @return ResponseEntity with the created ServiceDto.
+     */
+    @PreAuthorize("hasRole('ADMIN')") // Only users with ADMIN role can access this.
+    @PostMapping
+    public ResponseEntity<BeautyServiceDTO> createService(@Valid @RequestBody BeautyServiceDTO serviceDto) {
+        BeautyServiceDTO createdService = serviceService.createService(serviceDto);
+        return new ResponseEntity<>(createdService, HttpStatus.CREATED); // Return 201 Created.
     }
 
     /**
-     * Get all active beauty services.
-     * Accessible by anyone.
-     * @return List of BeautyServiceDTOs
+     * Retrieves a service by ID. Accessible by all authenticated users (ADMIN, TECHNICIAN, USER).
+     * @param id The ID of the service to retrieve.
+     * @return ResponseEntity with the ServiceDto.
      */
-    @GetMapping
-    public ResponseEntity<List<BeautyServiceDTO>> getAllActiveBeautyServices() {
-        List<BeautyServiceDTO> services = beautyServiceService.getAllActiveBeautyServices();
-        return ResponseEntity.ok(services);
-    }
-
-    /**
-     * Get a specific beauty service by ID.
-     * Accessible by anyone.
-     * @param id The ID of the beauty service
-     * @return BeautyServiceDTO if found
-     * @throws ResourceNotFoundException if service not found
-     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN', 'USER')")
     @GetMapping("/{id}")
-    public ResponseEntity<BeautyServiceDTO> getBeautyServiceById(@PathVariable Long id) {
-        // This line is correct as the service layer handles the Optional and throws if not found.
-        BeautyServiceDTO service = beautyServiceService.getBeautyServiceById(id);
-        return ResponseEntity.ok(service);
+    public ResponseEntity<BeautyServiceDTO> getServiceById(@PathVariable Long id) {
+        BeautyServiceDTO service = serviceService.getServiceById(id);
+        return ResponseEntity.ok(service); // Return 200 OK.
     }
 
     /**
-     * Admin endpoint: Get all beauty services (including inactive ones).
-     * Requires ADMIN role.
-     * @return List of BeautyServiceDTOs
+     * Retrieves all services. Accessible by all authenticated users.
+     * @return ResponseEntity with a list of ServiceDtos.
      */
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/admin/all")
-    public ResponseEntity<List<BeautyServiceDTO>> getAllBeautyServicesForAdmin() {
-        List<BeautyServiceDTO> services = beautyServiceService.getAllBeautyServices();
-        return ResponseEntity.ok(services);
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECHNICIAN', 'USER')")
+    @GetMapping
+    public ResponseEntity<List<BeautyServiceDTO>> getAllServices() {
+        List<BeautyServiceDTO> services = serviceService.getAllServices();
+        return ResponseEntity.ok(services); // Return 200 OK.
     }
 
     /**
-     * Admin endpoint: Create a new beauty service.
-     * Requires ADMIN role.
-     * @param beautyServiceDTO The DTO containing service details
-     * @return The created BeautyServiceDTO
+     * Updates an existing service. Accessible by ADMIN only.
+     * @param id The ID of the service to update.
+     * @param serviceDto The ServiceDto containing updated details.
+     * @return ResponseEntity with the updated ServiceDto.
      */
     @PreAuthorize("hasRole('ADMIN')")
-    @PostMapping("/admin")
-    public ResponseEntity<BeautyServiceDTO> createBeautyService(@Valid @RequestBody BeautyServiceDTO beautyServiceDTO) {
-        // ID should be null for creation, will be generated by DB
-        beautyServiceDTO.setId(null);
-        BeautyServiceDTO createdService = beautyServiceService.createBeautyService(beautyServiceDTO);
-        return new ResponseEntity<>(createdService, HttpStatus.CREATED);
+    @PutMapping("/{id}")
+    public ResponseEntity<BeautyServiceDTO> updateService(@PathVariable Long id, @Valid @RequestBody BeautyServiceDTO serviceDto) {
+        BeautyServiceDTO updatedService = serviceService.updateService(id, serviceDto);
+        return ResponseEntity.ok(updatedService); // Return 200 OK.
     }
 
     /**
-     * Admin endpoint: Update an existing beauty service.
-     * Requires ADMIN role.
-     * @param id The ID of the service to update
-     * @param beautyServiceDTO The DTO containing updated service details
-     * @return The updated BeautyServiceDTO
-     * @throws ResourceNotFoundException if service not found
+     * Deletes a service by ID. Accessible by ADMIN only.
+     * @param id The ID of the service to delete.
+     * @return ResponseEntity with no content.
      */
     @PreAuthorize("hasRole('ADMIN')")
-    @PutMapping("/admin/{id}")
-    public ResponseEntity<BeautyServiceDTO> updateBeautyService(@PathVariable Long id, @Valid @RequestBody BeautyServiceDTO beautyServiceDTO) {
-        BeautyServiceDTO updatedService = beautyServiceService.updateBeautyService(id, beautyServiceDTO);
-        return ResponseEntity.ok(updatedService);
-    }
-
-    /**
-     * Admin endpoint: Delete (deactivate) a beauty service.
-     * This method marks the service as inactive rather than deleting it from the database.
-     * Requires ADMIN role.
-     * @param id The ID of the service to delete/deactivate
-     * @return No content
-     * @throws ResourceNotFoundException if service not found
-     */
-    @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping("/admin/{id}")
-    public ResponseEntity<Void> deleteBeautyService(@PathVariable Long id) {
-        beautyServiceService.deleteBeautyService(id); // This will deactivate it
-        return ResponseEntity.noContent().build();
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteService(@PathVariable Long id) {
+        serviceService.deleteService(id);
+        return ResponseEntity.noContent().build(); // Return 204 No Content.
     }
 }

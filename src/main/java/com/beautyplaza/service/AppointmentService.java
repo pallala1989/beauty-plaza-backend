@@ -1,95 +1,84 @@
-// service/AppointmentService.java (Renamed from BookingService for clarity)
+
 package com.beautyplaza.service;
 
-import com.beautyplaza.dto.AppointmentDTO;
-import com.beautyplaza.model.Appointment;
-import com.beautyplaza.model.BeautyService;
-import com.beautyplaza.model.Technician;
-import com.beautyplaza.repository.AppointmentRepository;
-import com.beautyplaza.repository.BeautyServiceRepository;
-import com.beautyplaza.repository.TechnicianRepository;
-import com.beautyplaza.request.BookingRequest;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Service; // Changed from Component to Service
-
+// Importing the AppointmentDto and Java utilities.
+import com.beautyplaza.dto.AppointmentDto;
 import java.time.LocalDate;
-import java.time.LocalTime;
-import java.util.ArrayList;
 import java.util.List;
 
-@Service
-@RequiredArgsConstructor
-public class AppointmentService { // Renamed from BookingService
+/**
+ * Interface for Appointment-related business logic.
+ * Defines the contract for operations on Appointment data.
+ */
+public interface AppointmentService {
+    /**
+     * Creates a new appointment.
+     * @param appointmentDto The AppointmentDto containing appointment details.
+     * @return The created AppointmentDto.
+     */
+    AppointmentDto createAppointment(AppointmentDto appointmentDto);
 
-    private final AppointmentRepository appointmentRepository;
-    private final BeautyServiceRepository beautyServiceRepository;
-    private final TechnicianRepository technicianRepository;
+    /**
+     * Retrieves an appointment by its ID.
+     * @param appointmentId The ID of the appointment to retrieve.
+     * @return The AppointmentDto of the found appointment.
+     */
+    AppointmentDto getAppointmentById(Long appointmentId);
 
-    public List<LocalTime> getAvailableSlots(Long technicianId, LocalDate date, int serviceDurationInMinutes) {
-        List<LocalTime> allSlots = new ArrayList<>();
-        // Example: Salon open from 9 AM to 7 PM
-        LocalTime openingTime = LocalTime.of(9, 0);
-        LocalTime closingTime = LocalTime.of(19, 0);
+    /**
+     * Retrieves all appointments.
+     * @return A list of all AppointmentDtos.
+     */
+    List<AppointmentDto> getAllAppointments();
 
-        List<Appointment> existingAppointments = appointmentRepository.findByTechnicianIdAndAppointmentDate(technicianId, date);
+    /**
+     * Retrieves appointments for a specific customer.
+     * @param customerId The ID of the customer.
+     * @return A list of AppointmentDtos for the given customer.
+     */
+    List<AppointmentDto> getAppointmentsByCustomerId(String customerId);
 
-        LocalTime currentTimeSlot = openingTime;
-        while (currentTimeSlot.isBefore(closingTime)) {
-            boolean isBooked = false;
-            for (Appointment appt : existingAppointments) {
-                // Simplified check: assuming a slot is 30 mins and any overlap blocks the slot.
-                // A more robust system would check if the service duration fits into available gaps.
-                if (currentTimeSlot.equals(appt.getAppointmentTime())) {
-                    isBooked = true;
-                    break;
-                }
-            }
-            if (!isBooked) {
-                allSlots.add(currentTimeSlot);
-            }
-            currentTimeSlot = currentTimeSlot.plusMinutes(30); // Assuming 30-min slot intervals
-        }
-        return allSlots;
-    }
+    /**
+     * Retrieves appointments for a specific technician.
+     * @param technicianId The ID of the technician.
+     * @return A list of AppointmentDtos for the given technician.
+     */
+    List<AppointmentDto> getAppointmentsByTechnicianId(String technicianId);
 
-    public AppointmentDTO createBooking(BookingRequest bookingRequest) {
-        BeautyService beautyService = beautyServiceRepository.findById(bookingRequest.getBeautyServiceId())
-                .orElseThrow(() -> new RuntimeException("Beauty Service not found"));
-        Technician technician = technicianRepository.findById(bookingRequest.getTechnicianId())
-                .orElseThrow(() -> new RuntimeException("Technician not found"));
+    /**
+     * Retrieves appointments for a specific date.
+     * @param date The date to filter appointments by.
+     * @return A list of AppointmentDtos for the given date.
+     */
+    List<AppointmentDto> getAppointmentsByDate(LocalDate date);
 
-        Appointment appointment = new Appointment();
-        appointment.setBeautyServiceId(beautyService.getId());
-        appointment.setBeautyServiceName(beautyService.getName());
-        appointment.setTechnicianId(technician.getId());
-        appointment.setTechnicianName(technician.getName());
-        appointment.setAppointmentDate(bookingRequest.getAppointmentDate());
-        appointment.setAppointmentTime(bookingRequest.getAppointmentTime());
-        appointment.setCustomerName(bookingRequest.getCustomerName());
-        appointment.setCustomerEmail(bookingRequest.getCustomerEmail());
-        appointment.setCustomerPhone(bookingRequest.getCustomerPhone());
-        appointment.setNotes(bookingRequest.getNotes());
-        appointment.setServiceType(bookingRequest.getServiceType());
-        appointment.setStatus("SCHEDULED");
-        appointment.setTotalAmount(beautyService.getPrice());
+    /**
+     * Updates an existing appointment.
+     * @param appointmentId The ID of the appointment to update.
+     * @param appointmentDto The AppointmentDto containing updated details.
+     * @return The updated AppointmentDto.
+     */
+    AppointmentDto updateAppointment(Long appointmentId, AppointmentDto appointmentDto);
 
-        Appointment savedAppointment = appointmentRepository.save(appointment);
-        return toAppointmentDTO(savedAppointment);
-    }
+    /**
+     * Updates the status of an appointment.
+     * @param appointmentId The ID of the appointment to update.
+     * @param status The new status (e.g., "confirmed", "completed").
+     * @return The updated AppointmentDto.
+     */
+    AppointmentDto updateAppointmentStatus(Long appointmentId, String status);
 
-    private AppointmentDTO toAppointmentDTO(Appointment appointment) {
-        AppointmentDTO dto = new AppointmentDTO();
-        dto.setId(appointment.getId());
-        dto.setBeautyServiceId(appointment.getBeautyServiceId());
-        dto.setBeautyServiceName(appointment.getBeautyServiceName());
-        dto.setTechnicianId(appointment.getTechnicianId());
-        dto.setTechnicianName(appointment.getTechnicianName());
-        dto.setCustomerName(appointment.getCustomerName());
-        dto.setCustomerEmail(appointment.getCustomerEmail());
-        dto.setAppointmentDate(appointment.getAppointmentDate());
-        dto.setAppointmentTime(appointment.getAppointmentTime());
-        dto.setStatus(appointment.getStatus());
-        dto.setTotalAmount(appointment.getTotalAmount());
-        return dto;
-    }
+    /**
+     * Verifies an OTP for a given appointment.
+     * @param appointmentId The ID of the appointment.
+     * @param otp The OTP provided by the user.
+     * @return The updated AppointmentDto after OTP verification.
+     */
+    AppointmentDto verifyOtp(Long appointmentId, String otp);
+
+    /**
+     * Deletes an appointment by its ID.
+     * @param appointmentId The ID of the appointment to delete.
+     */
+    void deleteAppointment(Long appointmentId);
 }

@@ -8,7 +8,5 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface SettingRepository extends JpaRepository<Setting, Long> {
-    Optional<Setting> findBySettingKey(String settingKey);
-    List<Setting> findByCategory(String category);
+public interface SettingRepository extends JpaRepository<Setting, String> {
 }
